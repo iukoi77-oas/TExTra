@@ -181,4 +181,4 @@ The test script is located in the `test/` directory. It will automatically proce
 
 TExTra is currently in preparation. If you use this software in your research, please cite the following:
 
-> **TExTra: A computational framework for locus-specific quantification and classification of TE-derived exons.** > *Yanjie et al. (2024). In preparation.*
+> **TExTra: A computational framework for locus-specific quantification and classification of TE-derived exons.** > *Yanjing et al. (2026). In preparation.*
