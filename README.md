@@ -20,6 +20,8 @@ This design enables recovery of complete exon boundaries and accurate quantifica
 
 ## Installation
 
+Installation takes approximately 10 minutes, although the time required for downloading dependencies may vary depending on internet connection speed.
+
 ### 1. Clone the repository
 
 ```bash
