@@ -152,21 +152,29 @@ Alternatively, TACO can be installed from [GitHub/TACO](https://github.com/tacor
 
 ### Option 2: Docker
 
-Build the Docker image from the repository root:
+Use the prebuilt image from GitHub Container Registry:
+
+```bash
+docker pull --platform linux/amd64 ghcr.io/iukoi77-oas/textra:v1.1.0
+```
+
+The current Docker image is built for `linux/amd64`. On Apple Silicon Macs, keep `--platform linux/amd64`; the image will run through emulation and may be slower than on a native Linux x86_64 machine.
+
+Docker image pull time is not included in the demo runtime because it depends mainly on network speed and registry connectivity. The image includes the Conda runtime, TACO, PLEK2, and bundled demo data, so the first pull can be large. In our Apple Silicon Mac test, pulling the `linux/amd64` image from GHCR took approximately 40 minutes over the tested network. If the pull fails with `unexpected EOF`, rerun the same `docker pull` command; Docker will reuse completed layers.
+
+Show the TExTra help:
+
+```bash
+docker run --rm --platform linux/amd64 ghcr.io/iukoi77-oas/textra:v1.1.0 --help
+```
+
+To build the Docker image locally from the repository root:
 
 ```bash
 docker build -t textra:1.1.0 .
 ```
 
-During Docker build, TACO, PLEK2, and the bundled demo data are downloaded from [Zenodo](https://zenodo.org/records/21485736) and included in the final image. The build therefore requires network access to Zenodo.
-
-Show the TExTra help:
-
-```bash
-docker run --rm textra:1.1.0 --help
-```
-
-If using the GitHub Actions-published image, use `ghcr.io/iukoi77-oas/textra:v1.1.0`.
+During local Docker build, TACO, PLEK2, and the bundled demo data are downloaded from [Zenodo](https://zenodo.org/records/21485736) and included in the final image. The build therefore requires network access to Zenodo.
 
 For real analyses, keep FASTQ/BAM/reference files on the host machine and make the required directories available inside the container with Docker volume mounts (`-v`). Write outputs to a mounted host directory so results remain available after the container exits.
 
@@ -209,10 +217,13 @@ TExTra test --test-data-dir /path/to/example_data
 
 ```bash
 docker run --rm \
+  --platform linux/amd64 \
   -v "$PWD/test_result:/result" \
-  textra:1.1.0 test \
-  --out_dir /result
+  ghcr.io/iukoi77-oas/textra:v1.1.0 \
+  test --out_dir /result --threads 4 --njobs 1
 ```
+
+The `--njobs 1` setting runs sample-level jobs sequentially and reduces peak memory use in Docker Desktop. For Docker Desktop, allocate at least 8 GB memory; 12 GB or more is recommended for the bundled demo. If STAR is killed with `SIGKILL` during the demo, increase Docker memory or rerun with `--njobs 1`.
 
 ### Expected demo output
 
@@ -238,7 +249,7 @@ Key expected result files include:
 | `04_quantification/project.TE_overlap.exon_usage.tsv` | TE-overlapping exon usage values across samples. Key columns include `exon_id`, sample usage columns, `gene_id`, `transcript_id`, `te_overlap_label`, `ID_position_summary`, and `candidate_TE_event`. |
 | `05_downstream/DE/differential_significant_usage.tsv` | Significant differential TE-overlapping exon usage results. Key columns include `exon_id`, `group1`, `group2`, `mean_usage_group1`, `mean_usage_group2`, `delta_usage`, `higher_usage_group`, `pvalue`, and `padj`. |
 
-Expected demo runtime on a normal multi-core desktop/workstation is approximately 20-40 minutes. In our source-install test, `TExTra test` completed in 18.3 minutes with the default 4-thread demo settings. Runtime is dominated by read alignment, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, and whether external indexes or intermediate results are reused.
+Expected demo runtime on a normal multi-core desktop/workstation is approximately 20-40 minutes. In our Linux source-install test, `TExTra test` completed in 18.3 minutes with the default 4-thread demo settings. Docker runtime depends on the host platform and Docker resource limits; Apple Silicon Macs run the current `linux/amd64` image through emulation and may be slower. Runtime is dominated by read alignment, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, memory limits, and whether external indexes or intermediate results are reused.
 
 ## Instructions for Use
 
