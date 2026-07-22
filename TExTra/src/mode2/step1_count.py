@@ -556,13 +556,32 @@ def count_func(args):
             color="warning",
         )
     else:
-        source_counts = hitindex_summary_df["ID_position_source"].fillna("NA").astype(str).value_counts().to_dict()
-        source_text = ", ".join(f"{key}={value}" for key, value in sorted(source_counts.items()))
+        if "ID_position_summary" in hitindex_summary_df.columns:
+            position_values = hitindex_summary_df["ID_position_summary"].fillna("NA").astype(str).str.strip()
+        else:
+            position_values = pd.Series(["NA"] * len(hitindex_summary_df))
+        unresolved_mask = position_values.isin(["", "NA", "None", "nan"])
+        resolved_n = int((~unresolved_mask).sum())
+        unresolved_n = int(unresolved_mask.sum())
         log_message(
             "[INFO]",
-            f"Position evidence: events={len(hitindex_summary_df)}, {source_text}.",
+            (
+                f"Position evidence: events={len(hitindex_summary_df)}, "
+                f"resolved={resolved_n}, unresolved={unresolved_n}."
+            ),
             color="info",
         )
+        if getattr(args, "detail", False) or getattr(args, "debug", False):
+            if "ID_position_source" in hitindex_summary_df.columns:
+                source_counts = hitindex_summary_df["ID_position_source"].fillna("NA").astype(str).value_counts().to_dict()
+            else:
+                source_counts = {"NA": len(hitindex_summary_df)}
+            source_text = ", ".join(f"{key}={value}" for key, value in sorted(source_counts.items()))
+            log_message(
+                "[INFO]",
+                f"Position evidence source: {source_text}.",
+                color="info",
+            )
     event_anno_df = _load_exon_event_annotation_table(args.qual, args.project, hitindex_summary_df=hitindex_summary_df)
     usage_df, usage_wide = _build_exon_event_usage_and_matrix(
         transcript_df=transcript_all,

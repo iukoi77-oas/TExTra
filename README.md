@@ -220,7 +220,7 @@ docker run --rm \
   --platform linux/amd64 \
   -v "$PWD/test_result:/result" \
   ghcr.io/iukoi77-oas/textra:v1.1.0 \
-  test --out_dir /result --threads 4 --njobs 1
+  test --out_dir /result --threads 8 --njobs 1
 ```
 
 The `--njobs 1` setting runs sample-level jobs sequentially and reduces peak memory use in Docker Desktop. For Docker Desktop, allocate at least 8 GB memory; 12 GB or more is recommended for the bundled demo. If STAR is killed with `SIGKILL` during the demo, increase Docker memory or rerun with `--njobs 1`. If memory is still constrained, use `--threads 2 --njobs 1`.
@@ -249,7 +249,7 @@ Key expected result files include:
 | `04_quantification/project.TE_overlap.exon_usage.tsv` | TE-overlapping exon usage values across samples. Key columns include `exon_id`, sample usage columns, `gene_id`, `transcript_id`, `te_overlap_label`, `ID_position_summary`, and `candidate_TE_event`. |
 | `05_downstream/DE/differential_significant_usage.tsv` | Significant differential TE-overlapping exon usage results. Key columns include `exon_id`, `group1`, `group2`, `mean_usage_group1`, `mean_usage_group2`, `delta_usage`, `higher_usage_group`, `pvalue`, and `padj`. |
 
-Expected demo runtime on a normal multi-core desktop/workstation is approximately 20-40 minutes. In our Linux source-install test, `TExTra test` completed in 18.3 minutes with the default 4-thread RSEM demo settings. Docker runtime depends on the host platform and Docker resource limits; Apple Silicon Macs run the current `linux/amd64` image through emulation and may be slower. Runtime is dominated by read alignment, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, memory limits, selected quantifier, and whether external indexes or intermediate results are reused.
+Expected demo runtime on a normal multi-core desktop/workstation is approximately 20-40 minutes. In our Linux source-install test, `TExTra test` completed in 18.3 minutes with the default 4-thread RSEM demo settings. For the Docker demo on Apple Silicon Docker Desktop with 8 CPUs and 8 GB memory, the expected runtime is approximately 40 minutes with `--threads 8 --njobs 1`; this estimate excludes the initial image pull. Docker runtime depends on the host platform and Docker resource limits; Apple Silicon Macs run the current `linux/amd64` image through emulation and may be slower. Runtime is dominated by read alignment, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, memory limits, selected quantifier, and whether external indexes or intermediate results are reused.
 
 ## Instructions for Use
 

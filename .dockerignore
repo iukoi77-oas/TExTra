@@ -5,13 +5,16 @@ __pycache__/
 *.so
 *.egg-info/
 build/
+dist/
 
 # Local runtime outputs.
 logs/
 tmp/
+test_result*/
 test/result/
 test/test_*/
 test/runtime_test_result*/
+test/runtime_*/
 test/example_data/
 
 # Vendored external tools are downloaded from Zenodo during Docker build.
