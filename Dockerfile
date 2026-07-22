@@ -4,12 +4,25 @@ USER root
 WORKDIR /opt/TExTra
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential ca-certificates procps curl bzip2 && \
+    apt-get install -y --no-install-recommends build-essential ca-certificates procps curl bzip2 zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 
 COPY environment.yml .
 RUN micromamba create -y -f environment.yml && \
     micromamba clean --all --yes
+
+ARG STAR_VERSION=2.7.11b
+
+RUN set -eux; \
+    mkdir -p /tmp/star-build; \
+    curl -L --retry 5 --retry-delay 5 \
+        -o /tmp/star-build/STAR-${STAR_VERSION}.tar.gz \
+        "https://github.com/alexdobin/STAR/archive/refs/tags/${STAR_VERSION}.tar.gz"; \
+    tar -xzf /tmp/star-build/STAR-${STAR_VERSION}.tar.gz -C /tmp/star-build; \
+    cd /tmp/star-build/STAR-${STAR_VERSION}/source; \
+    make STAR CXXFLAGS_SIMD=sse; \
+    cp STAR /opt/conda/envs/TExTra/bin/STAR; \
+    rm -rf /tmp/star-build
 
 COPY . .
 
