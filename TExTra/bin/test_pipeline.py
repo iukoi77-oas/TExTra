@@ -77,6 +77,7 @@ class TestArgumentParser(argparse.ArgumentParser):
                     ("--te-overlap-min-frac", "Minimum overlap fraction for TE-overlap metrics. Default: 0.1."),
                     ("--splice-site-flank-bp", "Flank window around splice sites for boundary/anchor/var-site checks. Default: 10."),
                     ("--ignore-junction", "Ignore TE-overlap junction support/degradation checks. Default: off; TE overlap annotation is still generated."),
+                    ("--quantifier", "Quantification backend passed to quant: rsem or salmon. Default: rsem."),
                     ("--skip-diff", "Skip the diff step and stop after quant. Default: off."),
                     ("--diff-samples", "Two condition names for diff, comma-separated; if omitted, infer the first two input groups."),
                     ("--diff-padj", "Adjusted p-value threshold for diff. Default: 0.05."),
@@ -139,6 +140,12 @@ def parse_arguments(args_list):
         "--skip-diff",
         action="store_true",
         help="Skip diff step in test workflow.",
+    )
+    parser.add_argument(
+        "--quantifier",
+        choices=["rsem", "salmon"],
+        default="rsem",
+        help="Quantification backend passed to quant.",
     )
     parser.add_argument(
         "--diff-samples",
@@ -321,6 +328,7 @@ def main(args_list=None):
         "--project", args.project,
         "--strand", args.strand,
         "--readtype", args.readtype,
+        "--quantifier", args.quantifier,
         "--calculate-afe-ale",
         "--te-overlap-min-bp", str(args.te_overlap_min_bp),
         "--te-overlap-min-frac", str(args.te_overlap_min_frac),

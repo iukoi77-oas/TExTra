@@ -15,20 +15,32 @@ def run_command(cmd, show_tool_output, log_path=None):
     if show_tool_output:
         sp.run(cmd, check=True)
         return
-    result = sp.run(cmd, check=True, stdout=sp.PIPE, stderr=sp.PIPE, text=False)
-    stdout_text = result.stdout.decode("utf-8", errors="replace") if isinstance(result.stdout, (bytes, bytearray)) else str(result.stdout or "")
-    stderr_text = result.stderr.decode("utf-8", errors="replace") if isinstance(result.stderr, (bytes, bytearray)) else str(result.stderr or "")
+    try:
+        result = sp.run(cmd, check=True, stdout=sp.PIPE, stderr=sp.PIPE, text=False)
+    except sp.CalledProcessError as exc:
+        if log_path:
+            _write_command_log(log_path, cmd, exc.stdout, exc.stderr, returncode=exc.returncode)
+        raise
     if log_path:
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
-        with open(log_path, "a", encoding="utf-8") as fh:
-            if stdout_text:
-                fh.write(stdout_text)
-                if not stdout_text.endswith("\n"):
-                    fh.write("\n")
-            if stderr_text:
-                fh.write(stderr_text)
-                if not stderr_text.endswith("\n"):
-                    fh.write("\n")
+        _write_command_log(log_path, cmd, result.stdout, result.stderr)
+
+
+def _write_command_log(log_path, cmd, stdout, stderr, returncode=None):
+    stdout_text = stdout.decode("utf-8", errors="replace") if isinstance(stdout, (bytes, bytearray)) else str(stdout or "")
+    stderr_text = stderr.decode("utf-8", errors="replace") if isinstance(stderr, (bytes, bytearray)) else str(stderr or "")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "a", encoding="utf-8") as fh:
+        fh.write("$ " + " ".join(str(x) for x in cmd) + "\n")
+        if returncode is not None:
+            fh.write(f"[returncode] {returncode}\n")
+        if stdout_text:
+            fh.write(stdout_text)
+            if not stdout_text.endswith("\n"):
+                fh.write("\n")
+        if stderr_text:
+            fh.write(stderr_text)
+            if not stderr_text.endswith("\n"):
+                fh.write("\n")
 
 
 def is_valid_rsem_reference_prefix(ref_prefix):
