@@ -384,65 +384,77 @@ def count_func(args):
         )
         log_message(
             "[INFO]",
-            f"{quantifier.upper()} sample started [{sample_index}/{total_quant_samples}]: {sample}",
+            f"{quantifier.upper()} sample running [{sample_index}/{total_quant_samples}]: {sample}",
             color="info",
         )
-        if quantifier == "salmon":
-            quant_df, _exported_quant_sf = _run_salmon_for_sample(
-                args=local_args,
-                sample=sample,
-                reads_info=sample_reads[sample],
-                salmon_index_dir=salmon_index_dir,
-                quant_dir=quant_dir,
-            )
-            tx_df = _normalize_transcript_quant_df("salmon", sample, quant_df, tx_to_gene, te_overlap_exon_txs)
-        else:
-            iso_df, genes_df, _iso_path, _gene_path = _run_rsem_for_sample(
-                args=local_args,
-                sample=sample,
-                reads_info=sample_reads[sample],
-                ref_prefix=ref_prefix,
-                resolved_aligner=resolved_aligner,
-                star_path_dir=star_path_dir,
-                quant_dir=quant_dir,
-                load_gene_abundance=compute_gene_abundance,
-            )
-            tx_df = _normalize_transcript_quant_df("rsem", sample, iso_df, tx_to_gene, te_overlap_exon_txs)
-        genes_df = None if quantifier == "salmon" else genes_df
-
-        gene_df = None
-        if compute_gene_abundance:
+        try:
             if quantifier == "salmon":
-                gene_df = tx_df.groupby(["sample", "gene_id"], as_index=False)[["estimated_count", "tpm"]].sum()
+                quant_df, _exported_quant_sf = _run_salmon_for_sample(
+                    args=local_args,
+                    sample=sample,
+                    reads_info=sample_reads[sample],
+                    salmon_index_dir=salmon_index_dir,
+                    quant_dir=quant_dir,
+                )
+                tx_df = _normalize_transcript_quant_df("salmon", sample, quant_df, tx_to_gene, te_overlap_exon_txs)
             else:
-                g_col = _pick_existing_col(genes_df, ["gene_id", "gene", "name"])
-                g_expected = _require_rsem_result_col(
-                    genes_df,
-                    ["expected_count", "expected_counts", "numreads"],
-                    "expected count",
-                    "RSEM genes.results",
+                iso_df, genes_df, _iso_path, _gene_path = _run_rsem_for_sample(
+                    args=local_args,
+                    sample=sample,
+                    reads_info=sample_reads[sample],
+                    ref_prefix=ref_prefix,
+                    resolved_aligner=resolved_aligner,
+                    star_path_dir=star_path_dir,
+                    quant_dir=quant_dir,
+                    load_gene_abundance=compute_gene_abundance,
                 )
-                g_tpm = _require_rsem_result_col(
-                    genes_df,
-                    ["tpm"],
-                    "TPM",
-                    "RSEM genes.results",
-                )
-                if g_col:
-                    g_local = genes_df.copy()
-                    g_local["_gene"] = g_local[g_col].astype(str)
-                    g_local["_abundance"] = pd.to_numeric(g_local[g_expected], errors="coerce").fillna(0.0)
-                    g_local["_tpm"] = pd.to_numeric(g_local[g_tpm], errors="coerce").fillna(0.0)
-                    gene_df = pd.DataFrame(
-                        {
-                            "sample": sample,
-                            "gene_id": g_local["_gene"].astype(str),
-                            "estimated_count": g_local["_abundance"].astype(float),
-                            "tpm": g_local["_tpm"].astype(float),
-                        }
-                    )
-                else:
+                tx_df = _normalize_transcript_quant_df("rsem", sample, iso_df, tx_to_gene, te_overlap_exon_txs)
+            genes_df = None if quantifier == "salmon" else genes_df
+
+            gene_df = None
+            if compute_gene_abundance:
+                if quantifier == "salmon":
                     gene_df = tx_df.groupby(["sample", "gene_id"], as_index=False)[["estimated_count", "tpm"]].sum()
+                else:
+                    g_col = _pick_existing_col(genes_df, ["gene_id", "gene", "name"])
+                    g_expected = _require_rsem_result_col(
+                        genes_df,
+                        ["expected_count", "expected_counts", "numreads"],
+                        "expected count",
+                        "RSEM genes.results",
+                    )
+                    g_tpm = _require_rsem_result_col(
+                        genes_df,
+                        ["tpm"],
+                        "TPM",
+                        "RSEM genes.results",
+                    )
+                    if g_col:
+                        g_local = genes_df.copy()
+                        g_local["_gene"] = g_local[g_col].astype(str)
+                        g_local["_abundance"] = pd.to_numeric(g_local[g_expected], errors="coerce").fillna(0.0)
+                        g_local["_tpm"] = pd.to_numeric(g_local[g_tpm], errors="coerce").fillna(0.0)
+                        gene_df = pd.DataFrame(
+                            {
+                                "sample": sample,
+                                "gene_id": g_local["_gene"].astype(str),
+                                "estimated_count": g_local["_abundance"].astype(float),
+                                "tpm": g_local["_tpm"].astype(float),
+                            }
+                        )
+                    else:
+                        gene_df = tx_df.groupby(["sample", "gene_id"], as_index=False)[["estimated_count", "tpm"]].sum()
+        except Exception as exc:
+            elapsed = time.monotonic() - sample_started
+            log_message(
+                "[ERROR]",
+                (
+                    f"{quantifier.upper()} sample failed [{sample_index}/{total_quant_samples}]: "
+                    f"{sample}, elapsed: {_format_elapsed(elapsed)}, error={exc}"
+                ),
+                color="error",
+            )
+            raise
         elapsed = time.monotonic() - sample_started
         return sample, status, tx_df, gene_df, elapsed
 
@@ -457,26 +469,35 @@ def count_func(args):
     sample_results = {}
     quant_started = time.monotonic()
     status_counts = {"computed": 0, "reused": 0}
-    with ThreadPoolExecutor(max_workers=worker_jobs) as executor:
-        future_map = {
-            executor.submit(_process_sample, sample_index, sample): sample
-            for sample_index, sample in enumerate(quant_sample_list, start=1)
-        }
-        for done_n, future in enumerate(as_completed(future_map), start=1):
-            sample, status, tx_df, gene_df, elapsed = future.result()
-            sample_results[sample] = (tx_df, gene_df)
-            status_counts[status] = status_counts.get(status, 0) + 1
-            gene_text = f", genes={len(gene_df)}" if gene_df is not None else ""
-            action = "reused" if status == "reused" else "completed"
-            log_message(
-                "[INFO]",
-                (
-                    f"{quantifier.upper()} sample {action} [{done_n}/{total_quant_samples}]: "
-                    f"{sample}, transcripts={len(tx_df)}{gene_text}, "
-                    f"elapsed: {_format_elapsed(elapsed)} finished"
-                ),
-                color="info",
-            )
+
+    def _record_sample_result(done_n, sample, status, tx_df, gene_df, elapsed):
+        sample_results[sample] = (tx_df, gene_df)
+        status_counts[status] = status_counts.get(status, 0) + 1
+        gene_text = f", genes={len(gene_df)}" if gene_df is not None else ""
+        action = "reused" if status == "reused" else "completed"
+        log_message(
+            "[INFO]",
+            (
+                f"{quantifier.upper()} sample {action} [{done_n}/{total_quant_samples}]: "
+                f"{sample}, transcripts={len(tx_df)}{gene_text}, "
+                f"elapsed: {_format_elapsed(elapsed)} finished"
+            ),
+            color="info",
+        )
+
+    if worker_jobs == 1:
+        for sample_index, sample in enumerate(quant_sample_list, start=1):
+            result = _process_sample(sample_index, sample)
+            _record_sample_result(sample_index, *result)
+    else:
+        with ThreadPoolExecutor(max_workers=worker_jobs) as executor:
+            future_map = {
+                executor.submit(_process_sample, sample_index, sample): sample
+                for sample_index, sample in enumerate(quant_sample_list, start=1)
+            }
+            for done_n, future in enumerate(as_completed(future_map), start=1):
+                sample, status, tx_df, gene_df, elapsed = future.result()
+                _record_sample_result(done_n, sample, status, tx_df, gene_df, elapsed)
     log_message(
         "[INFO]",
         (
