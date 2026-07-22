@@ -4,7 +4,7 @@ USER root
 WORKDIR /opt/TExTra
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential ca-certificates procps curl bzip2 zlib1g-dev && \
+    apt-get install -y --no-install-recommends build-essential ca-certificates procps curl bzip2 zlib1g-dev xxd && \
     rm -rf /var/lib/apt/lists/*
 
 COPY environment.yml .
@@ -20,7 +20,7 @@ RUN set -eux; \
         "https://github.com/alexdobin/STAR/archive/refs/tags/${STAR_VERSION}.tar.gz"; \
     tar -xzf /tmp/star-build/STAR-${STAR_VERSION}.tar.gz -C /tmp/star-build; \
     cd /tmp/star-build/STAR-${STAR_VERSION}/source; \
-    make STAR CXXFLAGS_SIMD=sse; \
+    make STAR CXXFLAGS_SIMD=-msse; \
     cp STAR /opt/conda/envs/TExTra/bin/STAR; \
     rm -rf /tmp/star-build
 
