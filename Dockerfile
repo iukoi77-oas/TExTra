@@ -16,8 +16,6 @@ RUN micromamba create -y -f environment.yml && \
 
 ARG STAR_VERSION=2.7.11b
 ARG STRINGTIE_VERSION=3.0.3
-ARG GFFREAD_VERSION=0.12.9
-ARG GFFCOMPARE_VERSION=0.12.10
 
 RUN set -eux; \
     mkdir -p /tmp/star-build; \
@@ -40,18 +38,6 @@ RUN set -eux; \
     make -j2; \
     cp stringtie /opt/conda/envs/TExTra/bin/stringtie; \
     rm -rf /tmp/stringtie-build
-
-RUN set -eux; \
-    mkdir -p /tmp/gff-build; \
-    git clone --depth 1 --branch "v${GFFREAD_VERSION}" --recursive https://github.com/gpertea/gffread.git /tmp/gff-build/gffread; \
-    cd /tmp/gff-build/gffread; \
-    make -j2; \
-    cp gffread /opt/conda/envs/TExTra/bin/gffread; \
-    git clone --depth 1 --branch "v${GFFCOMPARE_VERSION}" --recursive https://github.com/gpertea/gffcompare.git /tmp/gff-build/gffcompare; \
-    cd /tmp/gff-build/gffcompare; \
-    make -j2; \
-    cp gffcompare /opt/conda/envs/TExTra/bin/gffcompare; \
-    rm -rf /tmp/gff-build
 
 RUN set -eux; \
     ln -sf /usr/bin/samtools /opt/conda/envs/TExTra/bin/samtools; \
