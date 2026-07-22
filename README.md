@@ -160,7 +160,7 @@ docker pull --platform linux/amd64 ghcr.io/iukoi77-oas/textra:v1.1.0
 
 The current Docker image is built for `linux/amd64`. On Apple Silicon Macs, keep `--platform linux/amd64`; the image will run through emulation and may be slower than on a native Linux x86_64 machine.
 
-The Docker image compiles STAR with conservative SIMD settings during the image build so the bundled demo can run more reliably under `linux/amd64` emulation.
+The Docker image uses conservative builds of core C/C++ tools, including STAR, StringTie, gffread, gffcompare, samtools, and bedtools, so the bundled demo can run more reliably under `linux/amd64` emulation.
 
 Docker image pull time is not included in the demo runtime because it depends mainly on network speed and registry connectivity. The image includes the Conda runtime, TACO, PLEK2, and bundled demo data, so the first pull can be large. In our Apple Silicon Mac test, pulling the `linux/amd64` image from GHCR took approximately 40 minutes over the tested network. If the pull fails with `unexpected EOF`, rerun the same `docker pull` command; Docker will reuse completed layers.
 

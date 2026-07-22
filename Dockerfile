@@ -4,7 +4,10 @@ USER root
 WORKDIR /opt/TExTra
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential ca-certificates procps curl bzip2 zlib1g-dev xxd && \
+    apt-get install -y --no-install-recommends \
+        build-essential ca-certificates procps curl bzip2 \
+        bedtools git libbz2-dev libcurl4-openssl-dev liblzma-dev \
+        samtools zlib1g-dev xxd && \
     rm -rf /var/lib/apt/lists/*
 
 COPY environment.yml .
@@ -12,6 +15,9 @@ RUN micromamba create -y -f environment.yml && \
     micromamba clean --all --yes
 
 ARG STAR_VERSION=2.7.11b
+ARG STRINGTIE_VERSION=3.0.3
+ARG GFFREAD_VERSION=0.12.9
+ARG GFFCOMPARE_VERSION=0.12.10
 
 RUN set -eux; \
     mkdir -p /tmp/star-build; \
@@ -23,6 +29,36 @@ RUN set -eux; \
     make STAR CXXFLAGS_SIMD=-msse; \
     cp STAR /opt/conda/envs/TExTra/bin/STAR; \
     rm -rf /tmp/star-build
+
+RUN set -eux; \
+    mkdir -p /tmp/stringtie-build; \
+    curl -L --retry 5 --retry-delay 5 \
+        -o /tmp/stringtie-build/stringtie-${STRINGTIE_VERSION}.tar.gz \
+        "https://github.com/gpertea/stringtie/archive/refs/tags/v${STRINGTIE_VERSION}.tar.gz"; \
+    tar -xzf /tmp/stringtie-build/stringtie-${STRINGTIE_VERSION}.tar.gz -C /tmp/stringtie-build; \
+    cd /tmp/stringtie-build/stringtie-${STRINGTIE_VERSION}; \
+    make -j2; \
+    cp stringtie /opt/conda/envs/TExTra/bin/stringtie; \
+    rm -rf /tmp/stringtie-build
+
+RUN set -eux; \
+    mkdir -p /tmp/gff-build; \
+    git clone --depth 1 --branch "v${GFFREAD_VERSION}" --recursive https://github.com/gpertea/gffread.git /tmp/gff-build/gffread; \
+    cd /tmp/gff-build/gffread; \
+    make -j2; \
+    cp gffread /opt/conda/envs/TExTra/bin/gffread; \
+    git clone --depth 1 --branch "v${GFFCOMPARE_VERSION}" --recursive https://github.com/gpertea/gffcompare.git /tmp/gff-build/gffcompare; \
+    cd /tmp/gff-build/gffcompare; \
+    make -j2; \
+    cp gffcompare /opt/conda/envs/TExTra/bin/gffcompare; \
+    rm -rf /tmp/gff-build
+
+RUN set -eux; \
+    ln -sf /usr/bin/samtools /opt/conda/envs/TExTra/bin/samtools; \
+    ln -sf /usr/bin/bedtools /opt/conda/envs/TExTra/bin/bedtools; \
+    ln -sf /usr/bin/intersectBed /opt/conda/envs/TExTra/bin/intersectBed; \
+    ln -sf /usr/bin/sortBed /opt/conda/envs/TExTra/bin/sortBed; \
+    ln -sf /usr/bin/mergeBed /opt/conda/envs/TExTra/bin/mergeBed
 
 COPY . .
 
@@ -63,9 +99,23 @@ RUN set -eux; \
         /opt/TExTra/util/external/PLEK/PLEK2.py; \
     rm -rf /tmp/textra-downloads /tmp/textra-test
 
+ENV PATH=/opt/conda/envs/TExTra/bin:$PATH
+
 RUN micromamba run -n TExTra pip install --no-cache-dir .
 
-ENV PATH=/opt/conda/envs/TExTra/bin:$PATH
+RUN set -eux; \
+    STAR --version; \
+    stringtie --version; \
+    gffread --version >/dev/null 2>&1 || gffread --help >/dev/null; \
+    gffcompare --version >/dev/null 2>&1 || gffcompare --help >/dev/null; \
+    samtools --version >/dev/null; \
+    bedtools --version; \
+    rsem-calculate-expression --version; \
+    bowtie2 --version >/dev/null; \
+    salmon --version; \
+    /opt/TExTra/util/external/taco/taco_run --help >/dev/null; \
+    python /opt/TExTra/util/external/PLEK/PLEK2.py -h >/dev/null || true
+
 ENV TEXTRA_HOME=/opt/TExTra
 ENV TEXTRA_EXTERNAL_DIR=/opt/TExTra/util/external
 ENV PYTHONUNBUFFERED=1
