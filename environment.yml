@@ -1,0 +1,45 @@
+name: TExTra
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Python is pinned to 3.8 because PLEK2 currently depends on
+  # TensorFlow/Keras versions that are not reliably available for newer Python.
+  - python=3.8
+  - pip
+
+  # Core Python runtime used by TExTra modules.
+  - numpy=1.19.5
+  - pandas=1.3.*
+  - scipy=1.7.*
+  - joblib
+  - filelock
+  - pybedtools
+  - pysam
+  - biopython
+  - regex
+  - h5py=2.10.*
+  # PyMC3 imports deprecat, which expects the compiled wrapt._wrappers module.
+  # Install wrapt from conda so the C extension is available.
+  - wrapt=1.12.1
+
+  # External command-line tools called by prep/qual/quant/diff.
+  - bedtools
+  - samtools
+  - star
+  - stringtie
+  - gffcompare
+  - gffread
+  - rsem
+  - salmon
+  - bowtie2
+
+  # Python packages with old-version constraints.
+  # Keep these in pip to avoid pulling a large historical R/Bioconductor stack.
+  - pip:
+      - pymc3==3.11.5
+      - theano-pymc==1.1.2
+      - tensorflow==2.4.1
+      - keras==2.4.3
+      - protobuf<3.20

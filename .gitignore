@@ -1,0 +1,21 @@
+.DS_Store
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+
+# Runtime outputs.
+logs/
+tmp/
+test/result/
+test/test_*/
+test/example_data/
+
+# Large external tools are distributed through Zenodo and downloaded during Docker build.
+util/external/taco/
+util/external/PLEK/
+
+# Release archives generated locally.
+dist/

@@ -1,0 +1,29 @@
+.DS_Store
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+
+# Local runtime outputs.
+logs/
+tmp/
+test/result/
+test/test_*/
+test/example_data/
+
+# Vendored external tools are downloaded from Zenodo during Docker build.
+util/external/taco/
+util/external/PLEK/
+
+# Large alignment intermediates should be mounted or generated at runtime.
+*.bam
+*.bai
+*.sam
+
+# Quantifier/runtime logs are regenerated inside output directories.
+*.rsem_calc.log
+*.salmon_quant.log
+*.salmon_index.log
+*.salmon_transcripts.log
