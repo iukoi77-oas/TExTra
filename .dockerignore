@@ -11,6 +11,7 @@ logs/
 tmp/
 test/result/
 test/test_*/
+test/runtime_test_result*/
 test/example_data/
 
 # Vendored external tools are downloaded from Zenodo during Docker build.

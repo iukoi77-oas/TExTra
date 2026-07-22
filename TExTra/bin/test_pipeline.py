@@ -52,12 +52,12 @@ class TestArgumentParser(argparse.ArgumentParser):
                 "Optional arguments",
                 [
                     ("-h, --help", "Show this message and exit."),
-                    ("-o, --out_dir", "Output root directory. Default: test/result inside the repository."),
-                    ("--test-data-dir", "Directory containing test reads and default references. Default: repository test/example_data."),
+                    ("-o, --out_dir", "Output root directory. Default: test/result under the detected test root."),
+                    ("--test-data-dir", "Directory containing test reads and default references. Default: auto-detect test/example_data."),
                     ("-g, --genome", "Genome FASTA path; if omitted, use <test-data-dir>/reference.fa."),
                     ("-G, --gene", "Gene annotation GTF path; if omitted, use <test-data-dir>/gencode.vM21.gtf."),
                     ("-r, --te", "TE annotation path; if omitted, use <test-data-dir>/TE_rmsk.gtf."),
-                    ("--input-tsv", "Input TSV template resolved against --test-data-dir. Default: repository test/input.tsv."),
+                    ("--input-tsv", "Input TSV template resolved against --test-data-dir. Default: auto-detect test/input.tsv."),
                     ("-t, --threads", "Threads per module. Default: 4."),
                     ("--njobs", "Maximum number of parallel jobs. Default: omitted, use --threads."),
                     ("--seed", "Optional random seed passed to qual HITindex steps. Default: unset."),
@@ -105,14 +105,14 @@ def parse_arguments(args_list):
     )
     parser.add_argument(
         "--test-data-dir",
-        default=os.path.join(repo_dir, "test", "example_data"),
+        default=None,
         help="Directory containing test BAM/FASTQ files and default references.",
     )
-    parser.add_argument("-o", "--out_dir", default=os.path.join(repo_dir, "test", "result"), help="Output root directory.")
+    parser.add_argument("-o", "--out_dir", default=None, help="Output root directory.")
     parser.add_argument("-g", "--genome", default=None, help="Genome FASTA path; if omitted, use <test-data-dir>/reference.fa.")
     parser.add_argument("-G", "--gene", default=None, help="Gene annotation GTF path; if omitted, use <test-data-dir>/gencode.vM21.gtf.")
     parser.add_argument("-r", "--te", default=None, help="TE annotation path; if omitted, use <test-data-dir>/TE_rmsk.gtf.")
-    parser.add_argument("--input-tsv", default=os.path.join(repo_dir, "test", "input.tsv"), help="Input TSV template path resolved against --test-data-dir.")
+    parser.add_argument("--input-tsv", default=None, help="Input TSV template path resolved against --test-data-dir.")
     add_threading_arguments(parser, threads_help="Threads per module.")
     parser.add_argument("--seed", type=int, default=None, help="Optional random seed passed to qual HITindex steps.")
     add_project_argument(parser, default="project", help_text="Project prefix.")
@@ -212,6 +212,69 @@ def _resolve_reference_path(test_data_dir, user_value, default_name, label):
         raise FileNotFoundError(f"{label} not found: {path}")
     return path
 
+
+def _existing_default_path(user_value, candidates, label, expect_dir=False):
+    if user_value:
+        path = user_value if os.path.isabs(user_value) else os.path.abspath(user_value)
+    else:
+        path = None
+        for candidate in candidates:
+            if expect_dir and os.path.isdir(candidate):
+                path = candidate
+                break
+            if not expect_dir and os.path.isfile(candidate):
+                path = candidate
+                break
+        if path is None:
+            searched = ", ".join(os.path.abspath(x) for x in candidates)
+            raise FileNotFoundError(f"{label} not found. Searched: {searched}")
+    path = os.path.abspath(path)
+    if expect_dir and not os.path.isdir(path):
+        raise FileNotFoundError(f"{label} not found: {path}")
+    if not expect_dir and not os.path.isfile(path):
+        raise FileNotFoundError(f"{label} not found: {path}")
+    return path
+
+
+def _default_roots():
+    roots = []
+    for root in [os.environ.get("TEXTRA_HOME"), os.getcwd(), repo_dir]:
+        if not root:
+            continue
+        root = os.path.abspath(root)
+        if root not in roots:
+            roots.append(root)
+    return roots
+
+
+def _resolve_test_defaults(args):
+    roots = _default_roots()
+    args.test_data_dir = _existing_default_path(
+        args.test_data_dir,
+        [os.path.join(root, "test", "example_data") for root in roots],
+        "test data directory",
+        expect_dir=True,
+    )
+    args.input_tsv = _existing_default_path(
+        args.input_tsv,
+        [os.path.join(root, "test", "input.tsv") for root in roots],
+        "test input TSV",
+        expect_dir=False,
+    )
+    if args.out_dir is None:
+        for root in roots:
+            input_candidate = os.path.join(root, "test", "input.tsv")
+            data_candidate = os.path.join(root, "test", "example_data")
+            if os.path.isfile(input_candidate) or os.path.isdir(data_candidate):
+                args.out_dir = os.path.join(root, "test", "result")
+                break
+        if args.out_dir is None:
+            args.out_dir = os.path.join(os.getcwd(), "test", "result")
+    elif not os.path.isabs(args.out_dir):
+        args.out_dir = os.path.abspath(args.out_dir)
+    return args
+
+
 def _infer_diff_groups(input_tsv):
     groups = []
     seen = set()
@@ -237,6 +300,7 @@ def main(args_list=None):
     if args_list is None:
         args_list = sys.argv[2:] if len(sys.argv) > 1 and sys.argv[1] == "test" else sys.argv[1:]
     args = parse_arguments(args_list)
+    args = _resolve_test_defaults(args)
     _validate_parameters(args)
     from TExTra.bin.upstream_pipeline import main as upstream_main
     from TExTra.bin.mode3_pipeline import main as diff_main

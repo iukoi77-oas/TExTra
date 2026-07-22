@@ -69,7 +69,7 @@ The full reproducible environment, including software version constraints, is de
 
 TExTra can be installed with Conda or run through Docker.
 
-Typical install time on a normal desktop or workstation is approximately 10-30 minutes for Conda installation, depending mainly on dependency download speed and solver performance. Docker build time is typically longer on first build because the image installs the same Conda environment.
+Typical Conda install time on a normal desktop or workstation is approximately 10-30 minutes, depending mainly on dependency download speed and Conda solver performance. In our source-install test, creating the Conda environment took 9.2 minutes and `pip install .` took 5 seconds with several packages already cached. Docker build time is typically longer on first build because the image installs the same Conda environment and downloads bundled demo/external resources.
 
 ### Option 1: Conda
 
@@ -238,7 +238,7 @@ Key expected result files include:
 | `04_quantification/project.TE_overlap.exon_usage.tsv` | TE-overlapping exon usage values across samples. Key columns include `exon_id`, sample usage columns, `gene_id`, `transcript_id`, `te_overlap_label`, `ID_position_summary`, and `candidate_TE_event`. |
 | `05_downstream/DE/differential_significant_usage.tsv` | Significant differential TE-overlapping exon usage results. Key columns include `exon_id`, `group1`, `group2`, `mean_usage_group1`, `mean_usage_group2`, `delta_usage`, `higher_usage_group`, `pvalue`, and `padj`. |
 
-Expected demo runtime on a normal multi-core desktop/workstation is approximately 30-60 minutes. Runtime is dominated by read alignment, transcript assembly, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, and whether external indexes or intermediate results are reused.
+Expected demo runtime on a normal multi-core desktop/workstation is approximately 20-40 minutes. In our source-install test, `TExTra test` completed in 18.3 minutes with the default 4-thread demo settings. Runtime is dominated by read alignment, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, and whether external indexes or intermediate results are reused.
 
 ## Instructions for Use
 
