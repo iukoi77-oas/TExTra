@@ -167,8 +167,8 @@ The Docker image is built for `linux/amd64`. Apple Silicon users can run the ima
 Current Docker test status:
 
 * Apple Silicon macOS: image pull 15 min 22 s.
-* Intel macOS: not tested yet.
-* Windows: not tested yet.
+* Intel macOS: image pull 17 min 04 s; TensorFlow check passed.
+* Windows: image pull 16 min 08 s; TensorFlow check passed.
 
 Show the TExTra help:
 
@@ -257,20 +257,20 @@ Key expected result files include:
 | `04_quantification/project.TE_overlap.exon_usage.tsv` | TE-overlapping exon usage values across samples. Key columns include `exon_id`, sample usage columns, `gene_id`, `transcript_id`, `te_overlap_label`, `ID_position_summary`, and `candidate_TE_event`. |
 | `05_downstream/DE/differential_significant_usage.tsv` | Significant differential TE-overlapping exon usage results. Key columns include `exon_id`, `group1`, `group2`, `mean_usage_group1`, `mean_usage_group2`, `delta_usage`, `higher_usage_group`, `pvalue`, and `padj`. |
 
-Expected demo runtime on a normal multi-core desktop/workstation is approximately 20-45 minutes. Runtime is dominated by read alignment, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, memory limits, selected quantifier, platform emulation, and whether external indexes or intermediate results are reused.
+Expected demo runtime on a normal multi-core desktop/workstation is approximately 20-60 minutes. Runtime is dominated by read alignment, HITindex model fitting, and RSEM/Salmon quantification. The exact runtime depends on CPU count, disk speed, memory limits, selected quantifier, platform emulation, and whether external indexes or intermediate results are reused.
 
 Observed demo runtimes:
 
 * Conda on Linux x86_64: 18 min 18 s with `--threads 4`; `--njobs` was omitted, so the effective job limit was 4.
-* Docker on Apple Silicon macOS: 42 min 54 s with Docker Desktop, `--threads 8 --njobs 1`; this excludes the initial image pull.
-* Docker on Intel macOS: not tested yet.
-* Docker on Windows: not tested yet.
+* Docker on Apple Silicon macOS: 42 min 54 s with Docker Desktop memory 8 GB, swap 1 GB, CPU 8, `--threads 8 --njobs 1`; this excludes the initial image pull.
+* Docker on Intel macOS: 56 min 42 s with Docker Desktop memory 8 GB, swap 1 GB, CPU 8, `--threads 8 --njobs 1`; this excludes the initial image pull.
+* Docker on Windows: 53 min 48 s with Docker Desktop memory 12 GB, swap 1 GB, CPU 8, `--threads 8 --njobs 1`; this excludes the initial image pull.
 
 ## Instructions for Use
 
 ### 1. Prepare inputs
 
-Prepare an input TSV where the first column is the sample/condition name and the remaining columns are biological replicates.
+Prepare an input TSV where the first column is the sample/condition name and the remaining columns are biological replicates. All rows should use the same number of tab-separated columns. The first row should include the maximum replicate count expected in the file; rows with fewer replicates can be padded with empty tab-separated fields.
 
 Paired-end FASTQ example:
 
@@ -278,6 +278,8 @@ Paired-end FASTQ example:
 heart_14d    rep1_R1.fastq.gz,rep1_R2.fastq.gz    rep2_R1.fastq.gz,rep2_R2.fastq.gz
 heart_2m     rep1_R1.fastq.gz,rep1_R2.fastq.gz    rep2_R1.fastq.gz,rep2_R2.fastq.gz
 ```
+
+If one group has fewer replicates than the first row, keep the same column count by leaving the missing replicate field empty.
 
 BAM inputs are also supported:
 
@@ -353,7 +355,7 @@ Default mode writes only core result files and concise logs. Use:
 ## Troubleshooting
 
 * **Chromosome mismatch**: Genome FASTA, gene GTF, and TE annotation must use consistent chromosome names.
-* **Input formatting**: Use a tab-separated input file and comma-separated mates for paired-end FASTQ.
+* **Input formatting**: Use a tab-separated input file and comma-separated mates for paired-end FASTQ. Keep the same column count across rows; the first row should include the maximum replicate count, and rows with fewer replicates should be padded with empty tab-separated fields.
 * **Sample/group names**: Names used in `--samples` and `--groups` must match the first column of the input TSV and the quant sample-column prefixes.
 * **Conda solver issues**: Try `conda config --set channel_priority flexible`.
 * **PLEK2 import errors**: Confirm the environment includes TensorFlow 2.4.1, Keras 2.4.3, h5py 2.10.0, regex, and Biopython.

@@ -17,7 +17,18 @@ from util.common.write_logs import log_message
 
 def _run_intersectbed_to_gzip(out_path, command):
 	with gzip.open(out_path, "wb") as out_fh:
-		subprocess.run(command, check=True, stdout=out_fh)
+		proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+		try:
+			for chunk in iter(lambda: proc.stdout.read(1024 * 1024), b""):
+				if not chunk:
+					break
+				out_fh.write(chunk)
+		finally:
+			if proc.stdout is not None:
+				proc.stdout.close()
+		return_code = proc.wait()
+		if return_code != 0:
+			raise subprocess.CalledProcessError(return_code, command)
 
 def _run_intersectbed_to_plain(out_path, command):
 	with open(out_path, "wb") as out_fh:
