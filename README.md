@@ -39,8 +39,6 @@ Convenience workflows are also provided:
 * `upstream`: run `prep + qual + quant`.
 * `test`: run `prep + qual + quant + diff` on a small test dataset.
 
-![Workflow Overview](image/overview.png)
-
 ## System Requirements
 
 ### Operating system
