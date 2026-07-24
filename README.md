@@ -362,4 +362,4 @@ Default mode writes only core result files and concise logs. Use:
 
 TExTra is currently in preparation. If you use this software in your research, please cite:
 
-> **TExTra enables locus-specific quantification of transposable element-derived exonization from short-read RNA-seq.** *Yanjing et al. (2026). In preparation.*
+> **TExTra enables locus-specific quantification of transposable element-overlapping exons from short-read RNA-seq.** *Yanjing et al. (2026). In preparation.*
