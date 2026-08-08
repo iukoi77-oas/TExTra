@@ -35,8 +35,8 @@ TExTra qual --reuse --out_dir result
 | `--ignore-junction` | Ignore junction support/degradation checks while still generating TE-overlap annotation. Cannot be combined with `--junction`. |
 | `-j, --junction` | Minimum TE-side junction reads required to retain a TE-overlap call during junction evidence degradation. Default: `2.0`. If omitted and prep used a non-default `--junction`, inherit prep `--junction` and print an INFO message. Cannot be combined with `--ignore-junction` or `--skip-hitindex`. |
 | `--hitindex-dir` | Reuse completed per-replicate HITindex outputs. |
-| `--ss3-buffer` | 3' splice-site buffer size. |
-| `--ss5-buffer` | 5' splice-site buffer size. |
+| `--ss3-buffer` | 3' splice-site buffer size. Default: `50`. |
+| `--ss5-buffer` | 5' splice-site buffer size. Default: `20`. |
 | `--te-overlap-min-bp` | Minimum overlap bp for TE-overlap metrics. |
 | `--te-overlap-min-frac` | Minimum overlap fraction for TE-overlap metrics. |
 | `--splice-site-flank-bp` | Flank window around splice sites for boundary/anchor/var-site checks. |

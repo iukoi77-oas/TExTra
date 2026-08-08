@@ -38,6 +38,8 @@ TExTra upstream \
 | `--calculate-afe-ale` | Enable AFE/ALE usage outputs in qual. |
 | `--skip-hitindex` | Skip HITindex positional classification in qual. |
 | `--ignore-junction` | Ignore TE-overlap junction support/degradation checks in qual. |
+| `--ss3-buffer` | 3' splice-site buffer size for HITindex splice-site roles. Default: `50`. |
+| `--ss5-buffer` | 5' splice-site buffer size for HITindex splice-site roles. Default: `20`. |
 | `--quantifier` | Quantification backend for quant: `rsem` or `salmon`. |
 | `--quant-result-dir` | Reuse existing RSEM/Salmon backend outputs. |
 | `--compute-gene-abundance` | Export gene-level abundance in quant. |

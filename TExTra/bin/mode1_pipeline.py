@@ -84,8 +84,8 @@ class QualArgumentParser(argparse.ArgumentParser):
             help_box(
                 "Advanced options",
                 [
-                    ("--ss3-buffer", "3' splice-site buffer size for HITindex splice-site roles. Default: 20."),
-                    ("--ss5-buffer", "5' splice-site buffer size for HITindex splice-site roles. Default: 50."),
+                    ("--ss3-buffer", "3' splice-site buffer size for HITindex splice-site roles. Default: 50."),
+                    ("--ss5-buffer", "5' splice-site buffer size for HITindex splice-site roles. Default: 20."),
                     ("--genmodel-iters", "ADVI iterations in HITindex generative model. Default: 100000."),
                     ("--bootstrap-n", "Bootstrap iterations for HITindex significance. Default: 1000."),
                     ("--seed", "Optional random seed for HITindex model fitting and bootstrap. Default: unset."),
@@ -132,14 +132,14 @@ def parse_arguments(args_list):
         "--ss3-buffer",
         dest="ss3buffer",
         type=int,
-        default=20,
+        default=50,
         help="3' splice-site buffer size for HITindex splice-site roles.",
     )
     parser.add_argument(
         "--ss5-buffer",
         dest="ss5buffer",
         type=int,
-        default=50,
+        default=20,
         help="5' splice-site buffer size for HITindex splice-site roles.",
     )
     parser.add_argument(

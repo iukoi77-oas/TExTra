@@ -62,7 +62,7 @@ class TestArgumentParser(argparse.ArgumentParser):
                     ("--njobs", "Maximum number of parallel jobs. Default: omitted, use --threads."),
                     ("--seed", "Optional random seed passed to qual HITindex steps. Default: unset."),
                     ("--project", "Project prefix. Default: project."),
-                    ("--strand", "Library strand type: none, rf, fr, r, f. Default: rf."),
+                    ("--strand", "Library strand type: none, rf, fr, r, f. Default: fr."),
                     ("--readtype", "Read type: paired or single. Default: paired."),
                     ("--debug", "Enable debug mode and keep intermediate files. Default: off."),
                     ("--detail", "Enable detail mode for additional result-checking tables and summaries. Default: off."),
@@ -117,7 +117,7 @@ def parse_arguments(args_list):
     add_threading_arguments(parser, threads_help="Threads per module.")
     parser.add_argument("--seed", type=int, default=None, help="Optional random seed passed to qual HITindex steps.")
     add_project_argument(parser, default="project", help_text="Project prefix.")
-    add_read_layout_arguments(parser, strand_default="rf", strand_help="Library strand type.")
+    add_read_layout_arguments(parser, strand_default="fr", strand_help="Library strand type.")
     parser.add_argument(
         "--assembly-mode",
         choices=["de-novo", "reference-guided"],

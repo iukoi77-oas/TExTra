@@ -186,7 +186,7 @@ For real analyses, keep FASTQ/BAM/reference files on the host machine and make t
 
 ## Demo
 
-The demo uses a small chr18 subset of simulated mouse heart developmental RNA-seq data. The reads are paired-end and reverse-stranded (`rf`). The test data include:
+The demo uses a small chr18 subset of simulated mouse heart developmental RNA-seq data. The reads are paired-end and forward-stranded (`fr`), which is the default `TExTra test --strand` setting. The test data include:
 
 * Paired-end RNA-seq FASTQ files derived from simulated BAM files.
 * Reference genome annotation (GTF): GENCODE vM21 primary assembly annotations.

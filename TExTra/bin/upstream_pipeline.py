@@ -117,8 +117,8 @@ class UpstreamArgumentParser(argparse.ArgumentParser):
                     ("--seedMultimapNmax", "STAR seedMultimapNmax passed to STAR alignment. Default: 50000."),
                     ("--winAnchorMultimapNmax", "STAR winAnchorMultimapNmax passed to STAR alignment. Default: 100."),
                     ("--outFilterMultimapNmax", "STAR outFilterMultimapNmax passed to STAR alignment. Default: 100."),
-                    ("--ss3-buffer", "3' splice-site buffer size for HITindex splice-site roles. Default: 20."),
-                    ("--ss5-buffer", "5' splice-site buffer size for HITindex splice-site roles. Default: 50."),
+                    ("--ss3-buffer", "3' splice-site buffer size for HITindex splice-site roles. Default: 50."),
+                    ("--ss5-buffer", "5' splice-site buffer size for HITindex splice-site roles. Default: 20."),
                     ("--genmodel-iters", "HITindex ADVI iterations. Default: 100000."),
                     ("--bootstrap-n", "HITindex bootstrap iterations. Default: 1000."),
                 ],
@@ -172,8 +172,8 @@ def parse_arguments(args_list):
     parser.add_argument("--genmodel-iters", type=int, default=100000, help="HITindex ADVI iterations.")
     parser.add_argument("--bootstrap-n", type=int, default=1000, help="Bootstrap iterations.")
     parser.add_argument("--seed", type=int, default=None, help="Optional random seed passed to qual HITindex steps.")
-    parser.add_argument("--ss3-buffer", dest="ss3buffer", type=int, default=20, help="3' splice-site buffer size for HITindex splice-site roles.")
-    parser.add_argument("--ss5-buffer", dest="ss5buffer", type=int, default=50, help="5' splice-site buffer size for HITindex splice-site roles.")
+    parser.add_argument("--ss3-buffer", dest="ss3buffer", type=int, default=50, help="3' splice-site buffer size for HITindex splice-site roles.")
+    parser.add_argument("--ss5-buffer", dest="ss5buffer", type=int, default=20, help="5' splice-site buffer size for HITindex splice-site roles.")
     parser.add_argument("--te-overlap-min-bp", type=int, default=10, help="Minimum overlap bp for TE-overlap metrics.")
     parser.add_argument("--te-overlap-min-frac", type=float, default=0.1, help="Minimum overlap fraction for TE-overlap metrics.")
     parser.add_argument("--splice-site-flank-bp", type=int, default=10, help="Flank window (bp) around splice sites for boundary/anchor/var-site hit checks.")
