@@ -49,7 +49,10 @@ from util.common.write_logs import log_message
 
 def HITindex_pipeline(input_buffer_bed, bamfiles, samples, output_hitindex_dir, args, combined_out_dir=None):
     """Run per-sample HITindex metrics and export combined PSI tables."""
-    tmp_dir = os.path.join(output_hitindex_dir, 'tmp')
+    project_prefix = str(getattr(args, "project", "project"))
+    sample_prefix = "_".join(str(sample) for sample in samples) or str(os.getpid())
+    safe_sample_prefix = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in sample_prefix)
+    tmp_dir = os.path.join(output_hitindex_dir, 'tmp', safe_sample_prefix)
     os.makedirs(tmp_dir, exist_ok=True)
     if combined_out_dir is None:
         combined_out_dir = output_hitindex_dir
@@ -58,7 +61,6 @@ def HITindex_pipeline(input_buffer_bed, bamfiles, samples, output_hitindex_dir, 
     exon_outnames = []
     combined_afe = []
     combined_ale = []
-    project_prefix = str(getattr(args, "project", "project"))
     te_bed_path = os.path.join(args.prep, CONVERT_DIR, 'TE_anno.bed')
     min_overlap_bp = int(getattr(args, "te_overlap_min_bp", 10))
     min_overlap_frac = float(getattr(args, "te_overlap_min_frac", 0.1))

@@ -7,8 +7,9 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-from util.common.define_layout import CLASSIFY_DIR
+from util.common.define_layout import CLASSIFY_DIR, CONVERT_DIR
 from util.common.write_logs import log_message
+from util.qual.annotate_te_events import _build_exon_event_key, _collect_exon_te_annotations
 
 
 def publish_classify_dir(staged_classify_dir, final_classify_dir):
@@ -187,6 +188,90 @@ def seed_hitindex_outputs(
         if os.path.isfile(src_support):
             shutil.copy2(src_support, os.path.join(target_hitindex_dir, support_name))
     return copied
+
+
+def rebuild_combined_afe_ale_outputs_from_hitindex(classify_dir, project, replicates, args):
+    """Rebuild project-level AFE/ALE wide tables from reused per-replicate HITindex PSI files."""
+    hitindex_dir = os.path.join(classify_dir, "HITindex")
+    if not os.path.isdir(hitindex_dir):
+        raise RuntimeError(f"HITindex directory is missing: {hitindex_dir}")
+
+    replicate_order = list(dict.fromkeys(str(rep) for rep in replicates if str(rep).strip()))
+    if not replicate_order:
+        raise RuntimeError("No replicates were provided for rebuilding combined AFE/ALE outputs.")
+
+    te_bed_path = os.path.join(args.prep, CONVERT_DIR, "TE_anno.bed")
+    min_overlap_bp = int(getattr(args, "te_overlap_min_bp", 10))
+    min_overlap_frac = float(getattr(args, "te_overlap_min_frac", 0.1))
+    site_flank_bp = int(getattr(args, "splice_site_flank_bp", 10))
+    metric_defaults = {
+        "label": "no_overlap",
+        "te_overlap_n": 0,
+        "te_overlap_bp_max": 0,
+        "te_overlap_frac_max": 0.0,
+        "te_boundary_hit_any": 0,
+        "te_overlap_pass_any": 0,
+        "te_splice_site_repeat_TE": "",
+        "te_other_overlap_TE": "",
+    }
+    index_cols = [
+        "gene",
+        "exon",
+        "strand",
+        "label",
+        "te_overlap_n",
+        "te_overlap_bp_max",
+        "te_overlap_frac_max",
+        "te_boundary_hit_any",
+        "te_overlap_pass_any",
+        "te_splice_site_repeat_TE",
+        "te_other_overlap_TE",
+    ]
+    value_cols = {"AFEPSI": "AFEPSI", "ALEPSI": "ALEPSI"}
+    written = {}
+
+    for suffix, value_col in value_cols.items():
+        rows = []
+        for replicate in replicate_order:
+            path = os.path.join(hitindex_dir, f"{replicate}.{suffix}")
+            if not os.path.isfile(path):
+                raise RuntimeError(f"Reusable per-replicate {suffix} output is missing: {path}")
+            try:
+                df = pd.read_csv(path, sep="\t")
+            except (OSError, ValueError, pd.errors.EmptyDataError, pd.errors.ParserError) as exc:
+                raise RuntimeError(f"Failed to read reusable per-replicate {suffix} output: {path}") from exc
+            required_cols = {"gene", "exon", "strand", value_col}
+            missing = sorted(required_cols - set(df.columns))
+            if missing:
+                raise RuntimeError(
+                    f"Reusable per-replicate {suffix} output missing column(s) "
+                    f"{', '.join(missing)}: {path}"
+                )
+            if df.empty:
+                raise RuntimeError(f"Reusable per-replicate {suffix} output is empty: {path}")
+            df = df.copy()
+            df["Sample"] = replicate
+            rows.append(df)
+
+        all_df = pd.concat(rows, ignore_index=True).copy()
+        all_df["__event_key"] = all_df.apply(lambda r: _build_exon_event_key(r["exon"], r["strand"]), axis=1)
+        anno_map = _collect_exon_te_annotations(
+            all_df,
+            te_bed_path,
+            min_overlap_bp=min_overlap_bp,
+            min_overlap_frac=min_overlap_frac,
+            boundary_flank_bp=site_flank_bp,
+        )
+        for col, default_v in metric_defaults.items():
+            all_df[col] = all_df["__event_key"].map(lambda key: anno_map.get(key, {}).get(col, default_v))
+
+        wide = all_df.pivot_table(index=index_cols, columns="Sample", values=value_col, aggfunc="first")
+        wide = wide.reindex(columns=replicate_order)
+        out_path = os.path.join(classify_dir, f"{project}.{suffix}")
+        wide.reset_index().to_csv(out_path, sep="\t", index=False)
+        written[suffix] = out_path
+
+    return written
 
 
 def finalize_te_overlap_support_table(classify_dir, project):

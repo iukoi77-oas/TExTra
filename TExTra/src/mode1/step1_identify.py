@@ -32,6 +32,7 @@ from util.qual.manage_outputs import (
     load_te_overlap_support_records,
     prune_debug_hitindex_outputs,
     publish_classify_dir,
+    rebuild_combined_afe_ale_outputs_from_hitindex,
     seed_hitindex_outputs,
 )
 from util.qual.validate_inputs import (
@@ -671,6 +672,21 @@ def identify_func(args):
                 ),
                 color="info",
             )
+            if args.hitindex_dir and args.calculate_afe_ale:
+                written_afe_ale = rebuild_combined_afe_ale_outputs_from_hitindex(
+                    classify_dir,
+                    args.project,
+                    [replicate for _sample, _bam, replicate in replicate_tasks],
+                    args,
+                )
+                log_message(
+                    "[INFO]",
+                    (
+                        "Rebuilt combined AFE/ALE outputs from reusable HITindex PSI files: "
+                        + ", ".join(f"{key}={path}" for key, path in sorted(written_afe_ale.items()))
+                    ),
+                    color="info",
+                )
             if args.te_overlap_junction_evidence:
                 finalize_te_overlap_support_table(classify_dir, args.project)
                 raw_te_candidate_n = int(

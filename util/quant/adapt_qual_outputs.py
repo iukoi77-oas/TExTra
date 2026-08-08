@@ -26,6 +26,7 @@ CANDIDATE_EVENT_ORDER = {
     "candidate_exonized": 2,
     "NA": 3,
 }
+_LOGGED_AMBIGUOUS_MULTI_GENE_REPORTS = set()
 
 
 def _build_exon_event_id(chrom, start, end, strand):
@@ -52,6 +53,87 @@ def _parse_exon_coord(exon, strand=None):
 def _join_unique_values(values):
     vals = sorted({str(v).strip() for v in values if str(v).strip() and str(v).strip().lower() != "nan"})
     return ",".join(vals)
+
+
+def _ambiguous_multi_gene_report_path(qual_dir, project):
+    return os.path.join(
+        qual_dir,
+        CLASSIFY_DIR,
+        f"{project}.ambiguous_multi_gene_exon_events.tsv",
+    )
+
+
+def _event_id_series(df):
+    return df.apply(
+        lambda row: _build_exon_event_id(
+            row["exon_chrom"],
+            row["exon_start"],
+            row["exon_end"],
+            row["exon_strand"],
+        ),
+        axis=1,
+    )
+
+
+def _find_ambiguous_multi_gene_events(df):
+    if df.empty:
+        return {}
+    work = df.copy()
+    if "event_id" not in work.columns:
+        work["event_id"] = _event_id_series(work)
+    ambiguous = {}
+    for event_id, group in work.groupby("event_id", sort=True):
+        genes = sorted({str(v).strip() for v in group["gene_id"] if str(v).strip()})
+        if len(genes) <= 1:
+            continue
+        txs = sorted({str(v).strip() for v in group["transcript_id"] if str(v).strip()})
+        ambiguous[str(event_id)] = {
+            "exon_event": str(event_id),
+            "gene_ids": ",".join(genes),
+            "n_genes": len(genes),
+            "transcript_ids": ",".join(txs),
+            "n_transcripts": len(txs),
+            "action": "excluded_from_quant",
+            "reason": "exon_event_maps_to_multiple_genes",
+        }
+    return ambiguous
+
+
+def _write_ambiguous_multi_gene_report(qual_dir, project, ambiguous_events):
+    if not ambiguous_events:
+        return None
+    report_path = _ambiguous_multi_gene_report_path(qual_dir, project)
+    os.makedirs(os.path.dirname(report_path), exist_ok=True)
+    cols = [
+        "exon_event",
+        "gene_ids",
+        "n_genes",
+        "transcript_ids",
+        "n_transcripts",
+        "action",
+        "reason",
+    ]
+    pd.DataFrame(
+        [ambiguous_events[key] for key in sorted(ambiguous_events)],
+        columns=cols,
+    ).to_csv(report_path, sep="\t", index=False)
+    return report_path
+
+
+def _log_ambiguous_multi_gene_exclusion(ambiguous_events, report_path):
+    if not ambiguous_events:
+        return
+    if report_path in _LOGGED_AMBIGUOUS_MULTI_GENE_REPORTS:
+        return
+    _LOGGED_AMBIGUOUS_MULTI_GENE_REPORTS.add(report_path)
+    log_message(
+        "[WARNING]",
+        (
+            f"Excluded {len(ambiguous_events)} ambiguous multi-gene TE-overlap exon event(s) "
+            f"from quantification; report: {report_path}"
+        ),
+        color="warning",
+    )
 
 
 def _qual_annotation_table_path(qual_dir, project):
@@ -156,6 +238,10 @@ def _load_te_exon_event_tx_map(qual_dir, project):
     event_to_txs = defaultdict(set)
     event_to_gene = {}
     event_ids = set()
+    ambiguous_events = _find_ambiguous_multi_gene_events(df)
+    ambiguous_event_ids = set(ambiguous_events)
+    report_path = _write_ambiguous_multi_gene_report(qual_dir, project, ambiguous_events)
+    _log_ambiguous_multi_gene_exclusion(ambiguous_events, report_path)
     if df.empty:
         return [], event_to_txs, event_to_gene
     for _, row in df.iterrows():
@@ -169,6 +255,8 @@ def _load_te_exon_event_tx_map(qual_dir, project):
         gene_id = str(row.get("gene_id", "")).strip()
         if not event_id:
             continue
+        if event_id in ambiguous_event_ids:
+            continue
         event_ids.add(event_id)
         if tx_id:
             event_to_txs[event_id].add(tx_id)
@@ -177,9 +265,7 @@ def _load_te_exon_event_tx_map(qual_dir, project):
             if not prev_gene:
                 event_to_gene[event_id] = gene_id
             elif prev_gene != gene_id:
-                raise RuntimeError(
-                    f"Quant exon event maps to multiple genes: {event_id} -> {prev_gene}, {gene_id}"
-                )
+                continue
     return sorted(event_ids), event_to_txs, event_to_gene
 
 
@@ -864,6 +950,10 @@ def _load_exon_event_annotation_table(qual_dir, project, hitindex_summary_df=Non
         return pd.DataFrame(columns=cols)
 
     work = te_df.copy()
+    ambiguous_events = _find_ambiguous_multi_gene_events(work)
+    ambiguous_event_ids = set(ambiguous_events)
+    report_path = _write_ambiguous_multi_gene_report(qual_dir, project, ambiguous_events)
+    _log_ambiguous_multi_gene_exclusion(ambiguous_events, report_path)
 
     def _col_or_default(col, default):
         if col in work.columns:
@@ -876,15 +966,11 @@ def _load_exon_event_annotation_table(qual_dir, project, hitindex_summary_df=Non
                 return work[col]
         return pd.Series([default] * len(work), index=work.index)
 
-    work["event_id"] = work.apply(
-        lambda row: _build_exon_event_id(
-            row["exon_chrom"],
-            row["exon_start"],
-            row["exon_end"],
-            row["exon_strand"],
-        ),
-        axis=1,
-    )
+    work["event_id"] = _event_id_series(work)
+    if ambiguous_event_ids:
+        work = work.loc[~work["event_id"].astype(str).isin(ambiguous_event_ids)].copy()
+        if work.empty:
+            return pd.DataFrame(columns=cols)
     work["te_overlap_label_raw"] = _first_existing_col(
         ["te_overlap_label_raw", "te_overlap_label"],
         "TE_overlap",
@@ -921,8 +1007,6 @@ def _load_exon_event_annotation_table(qual_dir, project, hitindex_summary_df=Non
     grouped_rows = []
     for event_id, group in work.groupby("event_id", sort=True):
         genes = sorted({str(v).strip() for v in group["gene_id"] if str(v).strip()})
-        if len(genes) > 1:
-            raise RuntimeError(f"Quant exon event maps to multiple genes: {event_id} -> {', '.join(genes)}")
         hit = hitindex_by_event.get(str(event_id), {})
         position_summary = str(hit.get("ID_position_summary", "NA") or "NA")
         position_detail = str(hit.get("ID_position_detail", "NA") or "NA")
